@@ -4,6 +4,8 @@ from html.parser import HTMLParser
 INPUT_DIR = 'input/'
 OUTPUT_DIR = 'output/'
 
+BIT_DEPTH = '64' # '32' or '64'
+
 supportedOS = \
 {
 	'XP' : 'Windows XP',
@@ -54,6 +56,7 @@ class MyParser(HTMLParser):
 			# 	print(syscall)
 
 	# get index into dataList entries (minus one) for some OS + SP
+	# if no SP's in this table, return values are not unique!
 	def GetOSverIndex(self, osName, osSP):
 		colName = supportedOS[osName]
 		colIndex = self.colNames.index(colName)
@@ -63,13 +66,14 @@ class MyParser(HTMLParser):
 		if colIndex > 0:
 			for count in self.colCounts[:colIndex]:
 				index += count
-		spList = self.colSP[colName]
-		spNumbers = sorted([int(sp[2]) for sp in spList])
-		for spNum in spNumbers:
-			if spNum != osSP:
-				index += 1
-			else:
-				break
+		if self.hasSP:
+			spList = self.colSP[colName]
+			spNumbers = sorted([int(sp[2]) for sp in spList])
+			for spNum in spNumbers:
+				if spNum != osSP:
+					index += 1
+				else:
+					break
 		return index
 
 	# process data for a single OS + SP pair
@@ -182,11 +186,8 @@ def Parse(ntPath, winPath):
 	winParser.feed(winHtml)
 	winParser.ProcessAllData()
 
-def Parse32bit():
-	Parse(INPUT_DIR + 'nt32.html', INPUT_DIR + 'win32.html')
-
-def Parse64bit():
-	Parse(INPUT_DIR + 'nt64.html', INPUT_DIR + 'win64.html')
+def DoParse():
+	Parse(INPUT_DIR + 'nt{0}.html'.format(BIT_DEPTH), INPUT_DIR + 'win{0}.html'.format(BIT_DEPTH))
 
 def OutputResults():
 	with open(INPUT_DIR + 'top.h', 'r') as f:
@@ -198,7 +199,7 @@ def OutputResults():
 
 	for osName in supportedOS:
 		for osSP in supportedSP[osName]:
-			tableName = osName + '_' + 'SP' + str(osSP) + '_table32'
+			tableName = osName + '_' + 'SP' + str(osSP) + '_table{0}'.format(BIT_DEPTH)
 			tableNames.append(tableName)
 			defStart = 'Table ' + tableName + ' = \n{\n'
 			defEnd = '};\n'
@@ -218,12 +219,10 @@ def OutputResults():
 		tableListStr += '// ' + name + '\n'
 	tableListStr += '\n'
 
-	with open(OUTPUT_DIR + 'syscallnum.h', 'w') as f:
+	with open(OUTPUT_DIR + 'syscallnum{0}.h'.format(BIT_DEPTH), 'w') as f:
 		f.write(header + tableListStr + outputBody)
 
-Parse32bit()
+DoParse()
 OutputResults()
 
-# table = tables['XP'][3]
-# for entry in table:
-# 	print(entry[0], entry[1])
+print('Completed')

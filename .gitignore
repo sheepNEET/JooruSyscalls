@@ -1,4 +1,5 @@
 *.txt
 *.pyc
 .idea
-output/syscallnum.h
+output/syscallnum32.h
+output/syscallnum64.h
