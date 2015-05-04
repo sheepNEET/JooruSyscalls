@@ -1,10 +1,12 @@
 What this does
 
-- Parse Windows syscall tables copied from [j00ru.vexillium.org](http://j00ru.vexillium.org/)
+- Parse Windows syscall tables downloaded from [j00ru.vexillium.org](http://j00ru.vexillium.org/)
 - Extract data and output in C++ usable form
 
 Requirements
 
 - Python 3
 
-#### Grab the output at: [WIP] ####
+Status: Working
+
+#### Ignore the code and grab the output at: [WIP] ####

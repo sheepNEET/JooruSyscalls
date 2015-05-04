@@ -1,3 +1,7 @@
+# Copyright (c) 2015 sheepneet@gmail.com
+# This project is licensed under the terms of the BSD 2-Clause License
+#   (minus the second clause, see License.txt)
+
 from html.parser import HTMLParser
 
 # ------------------------ CONFIG START

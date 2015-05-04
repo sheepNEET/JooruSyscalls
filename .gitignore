@@ -1,5 +1,6 @@
 *.txt
 *.pyc
 .idea
+!License.txt
 output/syscallnum32.h
 output/syscallnum64.h

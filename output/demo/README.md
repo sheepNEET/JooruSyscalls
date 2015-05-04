@@ -1,1 +1,1 @@
-The current output files
+This folder contains the current output files.
