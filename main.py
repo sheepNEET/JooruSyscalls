@@ -1,8 +1,8 @@
 from html.parser import HTMLParser
 
-outputFile = open('./9j20911292ao1.txt', 'w')
-def output(s):
-	outputFile.write(s + '\n')
+# ------------------------ CONFIG START
+INPUT_DIR = 'input/'
+OUTPUT_DIR = 'output/'
 
 supportedOS = \
 {
@@ -24,6 +24,8 @@ tables = \
 {
 	'XP' : [], 'VISTA' : [], 'WIN7' : [], 'WIN8' : [], 'WIN81' : []
 }
+# ------------------------ CONFIG END
+
 for osName in supportedOS:
 	for _ in range(1 + max(supportedSP[osName])):
 		tables[osName].append([])
@@ -134,6 +136,7 @@ class MyParser(HTMLParser):
 			if self.colNames[index] not in self.colSP:
 				self.colSP[self.colNames[index]] = []
 			if data.strip() == '8.0':
+				# special case Windows 8
 				self.colSP[self.colNames[index]].append('SP0')
 			elif data.strip() != '8.1':
 				self.colSP[self.colNames[index]].append(data.strip())
@@ -180,13 +183,47 @@ def Parse(ntPath, winPath):
 	winParser.ProcessAllData()
 
 def Parse32bit():
-	Parse('jooru_files/nt32.html', 'jooru_files/win32.html')
+	Parse(INPUT_DIR + 'nt32.html', INPUT_DIR + 'win32.html')
 
 def Parse64bit():
-	Parse('jooru_files/nt64.html', 'jooru_files/win64.html')
+	Parse(INPUT_DIR + 'nt64.html', INPUT_DIR + 'win64.html')
+
+def OutputResults():
+	with open(INPUT_DIR + 'top.h', 'r') as f:
+		header = f.read() + '\n'
+
+	tableNames = []
+
+	outputBody = ''
+
+	for osName in supportedOS:
+		for osSP in supportedSP[osName]:
+			tableName = osName + '_' + 'SP' + str(osSP) + '_table32'
+			tableNames.append(tableName)
+			defStart = 'Table ' + tableName + ' = \n{\n'
+			defEnd = '};\n'
+
+			entries = tables[osName][osSP]
+			allEntryStr = ''
+			for entry in entries:
+				syscallNumber = entry[0]
+				syscallName = entry[1]
+				entryStr = '\t{' + str(syscallNumber) + ', "' + syscallName + '"},\n'
+				allEntryStr += entryStr
+
+			outputBody += (defStart + allEntryStr + defEnd + '\n')
+
+	tableListStr = ''
+	for name in tableNames:
+		tableListStr += '// ' + name + '\n'
+	tableListStr += '\n'
+
+	with open(OUTPUT_DIR + 'syscallnum.h', 'w') as f:
+		f.write(header + tableListStr + outputBody)
 
 Parse32bit()
+OutputResults()
 
-table = tables['XP'][3]
-for entry in table:
-	print(entry[0], entry[1])
+# table = tables['XP'][3]
+# for entry in table:
+# 	print(entry[0], entry[1])
