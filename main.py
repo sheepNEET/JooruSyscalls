@@ -1,5 +1,4 @@
-import html.parser
-import sys, time
+from html.parser import HTMLParser
 
 outputFile = open('./9j20911292ao1.txt', 'w')
 def output(s):
@@ -29,18 +28,21 @@ for osName in supportedOS:
 	for _ in range(1 + max(supportedSP[osName])):
 		tables[osName].append([])
 
-class MyParser(html.parser.HTMLParser):
+class MyParser(HTMLParser):
 	def __init__(self):
 		super().__init__()
-		self.rowNumber = (-1)
-		self.colNumber = (-1)
-		self.colNames = []
-		self.colCounts = []
-		self.colSP = {}
-		self.newCol = False
-		self.dataList = []
 
-	# quick diagnostic
+		self.rowNumber = (-1) # keep track of where we are
+		self.colNumber = (-1)
+		self.newCol = False # did we just hit a new column?
+
+		self.colNames = [] # OS version of each column group
+		self.colCounts = [] # number of service packs in each column group (may all be 1)
+		self.colSP = {} # service pack lists for each column group
+
+		self.dataList = [] # list of (syscallName, num1, num2, num3, ...) entries we read
+
+	# print debugging
 	def Diag(self):
 		for name in self.colNames:
 			print(name)
@@ -49,7 +51,8 @@ class MyParser(html.parser.HTMLParser):
 			# for syscall in self.dataList:
 			# 	print(syscall)
 
-	def GetIndex(self, osName, osSP):
+	# get index into dataList entries (minus one) for some OS + SP
+	def GetOSverIndex(self, osName, osSP):
 		colName = supportedOS[osName]
 		colIndex = self.colNames.index(colName)
 		if colIndex == -1:
@@ -66,24 +69,28 @@ class MyParser(html.parser.HTMLParser):
 			else:
 				break
 		return index
-	def Process(self, osName, osSP, target):
-		index = self.GetIndex(osName, osSP)
+
+	# process data for a single OS + SP pair
+	def ProcessForTarget(self, osName, osSP, target):
+		index = self.GetOSverIndex(osName, osSP)
 		for syscall in self.dataList:
 			callName = syscall[0]
 			callNumber = syscall[index+1]
 			target.append([callNumber, callName])
-	def ProcessData(self):
+
+	# process data for all OS + SP pairs
+	def ProcessAllData(self):
 		for osName in supportedOS:
 			for osSP in supportedSP[osName]:
 				target = tables[osName][osSP]
-				self.Process(osName, osSP, target)
+				self.ProcessForTarget(osName, osSP, target)
 
-	def NewRow(self, attrs):
+	def OnNewRow(self, attrs):
 		self.rowNumber += 1
 		self.colNumber = -1
 		self.newCol = False
 
-	def NewCol(self, attrs):
+	def OnNewCol(self, attrs):
 		self.colNumber += 1
 		d = dict(attrs)
 
@@ -102,7 +109,7 @@ class MyParser(html.parser.HTMLParser):
 
 		self.newCol = True
 
-	def NewData(self, data):
+	def OnNewData(self, data):
 		if not self.newCol:
 			return
 		else:
@@ -147,28 +154,38 @@ class MyParser(html.parser.HTMLParser):
 			else:
 				self.dataList[-1].append(int(data.strip(), 16))
 
+	# override HTMLParser
 	def handle_starttag(self, tag, attrs):
 		if tag == 'tr':
-			self.NewRow(attrs)
+			self.OnNewRow(attrs)
 		elif tag == 'td':
-			self.NewCol(attrs)
+			self.OnNewCol(attrs)
 
+	# override HTMLParser
 	def handle_data(self, data):
-		self.NewData(data)
+		self.OnNewData(data)
 
-def GetHtmlStr(path):
-	with open(path, 'r') as f:
-		return f.read().strip()
+def Parse(ntPath, winPath):
+	ntParser = MyParser()
+	winParser = MyParser()
+	with open(ntPath, 'r') as f:
+		ntHtml = f.read().strip()
+	with open(winPath, 'r') as f:
+		winHtml = f.read().strip()
 
-ntparser = MyParser()
-winparser = MyParser()
+	ntParser.feed(ntHtml)
+	ntParser.ProcessAllData()
 
-nthtml = GetHtmlStr('jooru_files/nt32.html')
-winhtml = GetHtmlStr('jooru_files/win32.html')
-ntparser.feed(nthtml)
-ntparser.ProcessData()
-winparser.feed(winhtml)
-winparser.ProcessData()
+	winParser.feed(winHtml)
+	winParser.ProcessAllData()
+
+def Parse32bit():
+	Parse('jooru_files/nt32.html', 'jooru_files/win32.html')
+
+def Parse64bit():
+	Parse('jooru_files/nt64.html', 'jooru_files/win64.html')
+
+Parse32bit()
 
 table = tables['XP'][3]
 for entry in table:
