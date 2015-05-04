@@ -1,0 +1,2 @@
+- Parse Windows syscall tables copied from [j00ru.vexillium.org](http://j00ru.vexillium.org/)
+- Extract data and output in C++ usable form
